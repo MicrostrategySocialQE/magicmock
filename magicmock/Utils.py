@@ -3,7 +3,7 @@ Created on Mar 15, 2012
 
 @author: mxu
 '''
-import os, sys, socket, stat, types, copy, signal
+import os, sys, socket, stat, types, copy, signal,httplib2
 import json, logging
 from datetime import datetime
 import pyclbr
@@ -13,12 +13,12 @@ import shutil, errno
 import ConfigParser
 from subprocess import Popen, PIPE
 from magicmock.Http import web
-from magicmock import Exceptions, Utils
+import Exceptions
+
 
 
     
-currunname = str(random.randint(10000,99999))
-mode = WorkMode.Remote
+
 configfile = "seletest.cfg"
 configfilePath = ""
 config = None
@@ -44,7 +44,7 @@ def ConvertHeaderToDict(headers):
      [('header','content')] -> {'header':'content'}
     '''    
     if not isinstance(headers, list):
-        raise ExceptionManagement.IncorrectFormatError("Not a dict format!")
+        raise Exceptions.IncorrectFormatError("Not a dict format!")
         
         
     result = {}
@@ -84,7 +84,7 @@ class Request:
 
         if not method:
             self.method = None
-            raise ExceptionManagement.IncompleteInfoError("method is not defined")
+            raise Exceptions.IncompleteInfoError("method is not defined")
         else:
             self.method = method
             
@@ -147,7 +147,7 @@ class Request:
         '''
         if '%s' in self.url:
             if self.url_parameters==None:
-                raise ExceptionManagement.IncompleteInfoError("url and it's parameters don't match")
+                raise Exceptions.IncompleteInfoError("url and it's parameters don't match")
 
             self.url = self.url % self.url_parameters
         
@@ -205,7 +205,7 @@ class Request:
                 if resp.has_key(item):
                     headers[item] = resp[item]
                 else:
-                    raise ExceptionManagement.IncompleteInfoError('No such headers!')
+                    raise Exceptions.IncompleteInfoError('No such headers!')
             if headers:
                 result['headers'] = headers
         result['status'] = resp['status']
@@ -224,35 +224,6 @@ class Response:
         self.headers = response_header
         self.status = status    
         self.url = url
-
-
-def Copy(src, dst):
-    """
-    copy file from src to dst 
-    also support recursively copy an entire directory tree rooted at src
-    """
-    shutil.rmtree(dst,ignore_errors=True)
-    if not os.path.isdir(dst):   
-        try:
-            shutil.copytree(src, dst)
-        except OSError as exc: 
-            if exc.errno == errno.ENOTDIR:
-                shutil.copy(src, dst)
-            else: raise
-        
-def SetCurRunName(name):
-    """
-    set global variable currunname
-    """
-    global currunname
-    currunname = name
-
-def SetMode(name):
-    """
-    set global variable mode
-    """
-    global mode
-    mode = name
 
 def SetConfigFile(name):
     """
@@ -318,7 +289,7 @@ def SetBaseUrl(url):
 def GetBaseUrl():
     return baseurl
 
-def GetJsonFromFile(paths = None,filename = None):
+def GetJsonFromFile(filename):
     """
     get json from file
     
@@ -330,10 +301,7 @@ def GetJsonFromFile(paths = None,filename = None):
     @return: jsonobj  
     """
     try:
-        if paths:
-            filestream = open(GetFileStr(paths,filename), 'rb')
-        else:
-            filestream = open(GetFileStr(filename))
+        filestream = open(filename, 'rb')
         jsonobj = json.load(filestream,object_hook=_decode_dict)
         return jsonobj
     except Exception,e:
@@ -371,14 +339,21 @@ def InitConfig():
     global configfilePath
     config = {}
     cfg = ConfigParser.RawConfigParser()
+
+    base_path = os.getcwd()
+
     if configfilePath:
-        path_str = "/".join(["conf",configfilePath])
-        paths = path_str.split("/")
-        cfg.read(GetFileStr(paths, configfile))
+        path_str = "/".join(["conf",configfilePath,configfile])
+        paths = path_str.split("/")       
+        full_path = base_path
+        for path in paths:
+            full_path = os.path.join(full_path, base_path)
+        cfg.read(full_path)
     else:
-        cfg.read(GetFileStr(ConvertToList('conf'), configfile))
+        cfg.read(os.path.join(base_path, "conf", configfile))
+
     if not cfg.sections():
-        raise ExceptionManagement.IncorrectConfigError("Cannot read config info from %s at %s, please check you config filename and path!" % (configfile, configfilePath))
+        raise Exceptions.IncorrectConfigError("Cannot read config info from %s at %s, please check you config filename and path!" % (configfile, configfilePath))
     
     config["SuitesInfo"] = {}
     for section in cfg.sections():                        
@@ -420,10 +395,10 @@ def AssertConfig(section, key):
 #    Log.Chorus.debug("Verifying key '%s' in section '%s..." % (section, key))
         if not config.has_key(section):
             Log.Chorus.error("%s section is missing!")
-            raise ExceptionManagement.IncorrectConfigError("%s section is missing! Please check your config file!" % section)
+            raise Exceptions.IncorrectConfigError("%s section is missing! Please check your config file!" % section)
         if not config[section].has_key(key.lower()):
             Log.Chorus.error("%s key is missing!")        
-            raise ExceptionManagement.IncorrectConfigError("Key '%s' is missing! Please check your config file!" % key)
+            raise Exceptions.IncorrectConfigError("Key '%s' is missing! Please check your config file!" % key)
         return True
     else:
         return False
@@ -629,6 +604,20 @@ def whereis(*args):
     print "No executable files found! Please add it into environment path"
     return ""
 
+def copy_folder(src, dst):
+    """
+    copy file from src to dst 
+    also support recursively copy an entire directory tree rooted at src
+    """
+    shutil.rmtree(dst,ignore_errors=True)
+    if not os.path.isdir(dst):   
+        try:
+            shutil.copytree(src, dst)
+        except OSError as exc: 
+            if exc.errno == errno.ENOTDIR:
+                shutil.copy(src, dst)
+            else: raise
+            
 def DelInDict(obj, keys):
     if isinstance(obj, dict) and isinstance(obj, dict):
         for key in copy.deepcopy(obj).keys():

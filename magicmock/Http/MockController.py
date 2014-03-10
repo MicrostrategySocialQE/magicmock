@@ -3,11 +3,11 @@ Created on Jun 22, 2013
 
 @author: mxu
 '''
-import Utils, web
+import web
 from web import Mode
-from ChorusCore import ExceptionManagement, Utils as ChorusUtils
-from ChorusCore import Log
-from ChorusCore.APIManagement import  Request
+from magicmock import Exceptions, Utils
+from magicmock import Log
+from magicmock.Utils import  Request
 import json, os, copy
 
 ignore_headers = ['content-length', 'content-location', 'status']
@@ -27,15 +27,15 @@ def GetResponse():
                 return response["body"]
         
 def ForwardRequest():
-    ChorusUtils.AssertConfig('MOCK_SERVER', 'serveraddress')
+    Utils.AssertConfig('MOCK_SERVER', 'serveraddress')
     base_url = web.mockserver.config['MOCK_SERVER']['serveraddress']
     url = web.ctx.fullpath
     headers = web.ctx.env['REQUEST_HEADERS']
 #    headers = Utils.ConvertHeaderToDict(web.ctx.headers)
     body = web.data()
     method = web.ctx.method
-    Log.Mockserver.debug("remote server url is %s" % base_url)
-    request = Request(url = url, headers = headers, method = method, body = body, base_url =  base_url)
+    Log.Mockserver.debug("remote server url is %s, headers are %s" % (base_url, str(headers)))
+    request = Request(url = url, headers = None, method = method, body = body, base_url =  base_url)
     req = request.send()
     if isinstance(req.response.data, dict) or isinstance(req.response.data, list) or isinstance(req.response.data, tuple):
         req.response.data = json.dumps(req.response.data)
@@ -87,47 +87,48 @@ def PerformMock():
 
 
 def ParseConfig(config_file, config_path):
-    ChorusUtils.SetConfigFilePath(config_path)
-    ChorusUtils.SetConfigFile(config_file)
-    ChorusUtils.InitConfig()
-    config = ChorusUtils.config
+    Utils.SetConfigFilePath(config_path)
+    Utils.SetConfigFile(config_file)
+    Utils.InitConfig()
+    config = Utils.config
     section = "MOCK_SERVER"
-    ChorusUtils.AssertConfig(section, "BASEURL")
-    ChorusUtils.AssertConfig(section, "Port")
-    ChorusUtils.AssertConfig(section, "Mode")
+    Utils.AssertConfig(section, "BASEURL")
+    Utils.AssertConfig(section, "Port")
+    Utils.AssertConfig(section, "Mode")
     if config[section]["mode"] == "Mock":
-        ChorusUtils.AssertConfig(section, "APITemplatePath")
+        Utils.AssertConfig(section, "APITemplatePath")
         apiTemplatePath = config[section]["apitemplatepath"]
     else:
         apiTemplatePath = None  
     try:
         port = int(config["MOCK_SERVER"]["port"])
     except:
-        raise ExceptionManagement.IncorrectConfigError("Port should be an integer")
+        raise Exceptions.IncorrectConfigError("Port should be an integer")
     web.mockserver.config = config
     return config["MOCK_SERVER"]["baseurl"], port, apiTemplatePath
 
-
-
 def InitURLMapping(api_path):
     Log.Mockserver.info("Generate url mapping")
-    paths = ['Projects']
+    paths = os.getcwd()
+    Log.Mockserver.info(paths)
     for path in api_path.split("."):
-        paths.append(path)
-    abs_path = ChorusUtils.GetFileStr(paths)
+        paths = os.path.join(paths, path)
+
+    abs_path = paths
+    Log.Mockserver.info(paths)
     for filename in os.listdir(abs_path):
         if filename != "__init__.py":
             if filename[filename.rfind('.')+1::] == 'py' :
                 filename_no_ext = filename[0:filename.rfind('.')]
-                module = __import__('Projects.%s' % api_path,globals(),locals(),[filename_no_ext],-1)     
+                module = __import__('%s' % api_path,globals(),locals(),[filename_no_ext],-1)     
                 template = getattr(module, filename_no_ext)
                 
                 if not hasattr(template, 'url'):
-                    raise ExceptionManagement.IncompleteInfoError("No url info is found in template %s" % template.__name__)
+                    raise Exceptions.IncompleteInfoError("No url info is found in template %s" % template.__name__)
                 if not hasattr(template, 'method'):
-                    raise ExceptionManagement.IncompleteInfoError("No method info is found in template %s" % template.__name__)
+                    raise Exceptions.IncompleteInfoError("No method info is found in template %s" % template.__name__)
                 if not hasattr(template, 'response'):
-                    raise ExceptionManagement.IncompleteInfoError("No default response is found in template %s" % template.__name__)
+                    raise Exceptions.IncompleteInfoError("No default response is found in template %s" % template.__name__)
                
                 if web.mockserver.url_mapping.has_key(template.url):
                     web.mockserver.url_mapping[template.url][template.method] = template.response
@@ -136,8 +137,8 @@ def InitURLMapping(api_path):
     Log.Mockserver.debug("URL Mapping: %s" % web.mockserver.url_mapping)
 
 def InitMode():
-    ChorusUtils.AssertConfig("MOCK_SERVER", "Mode") 
-    web.mockserver.global_mode = ChorusUtils.config['MOCK_SERVER']["mode"]
+    Utils.AssertConfig("MOCK_SERVER", "Mode") 
+    web.mockserver.global_mode = Utils.config['MOCK_SERVER']["mode"]
     web.mockserver.mode = web.mockserver.global_mode
     
                          
@@ -154,7 +155,7 @@ def SetResponse(dct):
 def SetResponseCommon(dct):
     template_name = str(dct['template'])
     response = str(dct['response'])
-    api_path = ChorusUtils.config["MOCK_SERVER"]['apitemplatepath']
+    api_path = Utils.config["MOCK_SERVER"]['apitemplatepath']
     module = __import__('Projects.%s' % api_path,globals(),locals(),[template_name],-1)     
     template = getattr(module, template_name)
     response_info = getattr(template, response)
@@ -217,10 +218,10 @@ def LoadLdapConfig():
     for path in template_path.split("."):
         paths.append(path)
     try:
-        config = ChorusUtils.GetJsonFromFile(paths, "default.json")
+        config = Utils.GetJsonFromFile(paths, "default.json")
         return config
     except:
-        raise ExceptionManagement.UnableToRetrieveDataError("Error to load ldap config data. Please check file existence or format.")
+        raise Exceptions.UnableToRetrieveDataError("Error to load ldap config data. Please check file existence or format.")
     
 
 

@@ -3,11 +3,11 @@ Created on Jun 22, 2013
 
 @author: mxu
 '''
-from ChorusCore import Utils, ExceptionManagement
-from ChorusCore.APIManagement import Request
-from ChorusCore.Log import Output, Formatter, Logger, Name
-from ChorusCore import Log
-import json, logging
+from magicmock import Utils, Exceptions
+from magicmock.Utils import Request
+from magicmock.Log import Output, Formatter, Logger, Name
+from magicmock import Log
+import json, logging, os
 
 class Mode:
     '''
@@ -19,24 +19,22 @@ class Mode:
     Proxy = "Proxy"
     
 def LoadJson(json_file, json_path = None):
-
-
     assertResult = Utils.AssertConfig("MOCK_SERVER", "JsonTemplatePath")
-    paths = ['Projects']
+    paths = os.getcwd()
     if assertResult:
         for path in Utils.GetConfig("MOCK_SERVER","jsontemplatepath").split("."):
-            paths.append(path)
+            paths = os.path.join(paths, path)
         if json_path:
             if isinstance(json_path, str):
-                paths.append(json_path)
+                paths = os.path.join(paths, json_path)
             elif isinstance(json_path, list) or isinstance(json_path, tuple):
                 for jpath in json_path:
-                    paths.append(jpath)
+                    paths = os.path.join(paths, jpath)
             else:
                 print "unrecognized path list!"
         
     try:
-        result = Utils.GetJsonFromFile(paths, json_file)
+        result = Utils.GetJsonFromFile(os.path.join(paths, json_file))
     except Exception, e:
         
         result = {"mock_server_error":"invalid json file","exception": str(e)}
@@ -45,11 +43,11 @@ def LoadJson(json_file, json_path = None):
 def LoadImage(image_file):
     config = Utils.config
     Utils.AssertConfig("MOCK_SERVER", "JsonTemplatePath")
-    paths=['Projects']
+    paths=os.getcwd()
     for path in config["MOCK_SERVER"]["jsontemplatepath"].split("."):
-        paths.append(path)
+        paths = os.path.join(paths, path)
     try:
-        f = open(Utils.GetFileStr(paths,image_file), 'rb')
+        f = open(os.path.join(paths,image_file), 'rb')
         data = f.read()
     except Exception, e:
         data = {"mock_server_error":"invalid image file"}
@@ -67,7 +65,7 @@ def SetResponse(module_name, data):
     uri = "/set/response"    
     #assamble body
     print "test"+ url, api_path
-    module = __import__('Projects.%s.%s' % (api_path, module_name),globals(),locals(),[module_name, ''],-1)     
+    module = __import__('%s.%s' % (api_path, module_name),globals(),locals(),[module_name, ''],-1)     
     print 'this is module'
     print module
     body = {
@@ -102,7 +100,7 @@ def _get_baseurl():
     try:
         port = int(config[section]["port"])
     except:
-        raise ExceptionManagement.IncorrectConfigError("Port should be an integer")
+        raise Exceptions.IncorrectConfigError("Port should be an integer")
     #assamble url
     try:
         if config[section]["ssl"].lower() == "true":

@@ -4,11 +4,11 @@ Created on May 28, 2013
 @author: mxu
 '''
 import json, time
-import web, MockController, Utils as MockUtils
+import web, magicmock.Utils as MockUtils
 from web import Mode
-from ChorusCore.APIManagement import Request, Response
-from ChorusCore import Log, Utils
-
+from magicmock.Utils import Request, Response
+from magicmock import Log, Utils
+from magicmock.Http import MockController
 
 class RequestHandler(object):
     '''

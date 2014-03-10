@@ -46,7 +46,7 @@ Logger user guide:
     step2: init looger with your formatter as the input of "init_logging" function
 '''
 import logging, os
-import ExceptionManagement
+from magicmock import Exceptions
 
 class Formatter:
     MockServer = "%(asctime)s - %(name)s - {%(pathname)s:%(lineno)d} - %(levelname)s - %(message)s"
@@ -63,15 +63,16 @@ class Name:
     MockServer = "MockServer"
     Request = "Request"
     Response = "Response"
+
 class Logger:
-    def __init__(self, name = 'default', loglevel = logging.INFO, output = Output.Console, formatter = Formatter.ChorusCore, path = None,filename =None):
+    def __init__(self, name = 'default', loglevel = logging.INFO, output = Output.Console, formatter = Formatter.MockServer, path = None,filename =None):
     
         self.logger = logging.getLogger(name)
         self.logger.setLevel( loglevel )
         # create console handler and set level to debug
         if output == Output.File:
             if filename is None or path is None:
-                ExceptionManagement.IncompleteInfoError("filename or path is missing!")
+                Exceptions.IncompleteInfoError("filename or path is missing!")
             logfile = os.path.join( path, filename )
             ch = logging.FileHandler(logfile)
         else:

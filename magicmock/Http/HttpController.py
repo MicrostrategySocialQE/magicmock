@@ -3,7 +3,7 @@ Created on Jun 22, 2013
 
 @author: mxu
 '''
-from MockServer import Utils, web
+from magicmock import Utils, web
 import json
 def GetResponse(method = None):
     if method:
