@@ -3,7 +3,7 @@ Created on May 28, 2013
 
 @author: mxu
 '''
-import json, time
+import json, time, os
 import web, magicmock.Utils as MockUtils
 from web import Mode
 from magicmock.Utils import Request, Response
@@ -132,6 +132,23 @@ class SetDelay():
         except:
             Log.Mockserver.exception("general server error")
             return {"status":"failure"}
+
+class Meta():
+    def GET(self):
+        '''
+        get config Meta
+        '''
+        try:
+            meta = {"config": Utils.config["MOCK_SERVER"],
+                    "configfile": Utils.configfile,
+                    "configfilePath": Utils.configfilePath,
+                    "configfileFullPath":os.getcwd()}
+            return json.dumps(meta)
+        except:
+            Log.Mockserver.exception("general server error")
+            return {"status":"failure"}
+
+
         
 class SetLdap():
     def POST(self):

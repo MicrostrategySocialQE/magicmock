@@ -53,117 +53,87 @@ def LoadImage(image_file):
         data = {"mock_server_error":"invalid image file"}
     return data
 
-def SetResponse(module_name, data):
-    '''
-    set data returned by mock server
-    Two args: 
-        The first arg is the module instance of the api template
-        The second arg is response we'd like to set
-    if success, return true. else, return false
-    '''
-    url, api_path = _get_baseurl()
-    uri = "/set/response"    
-    #assamble body
-    print "test"+ url, api_path
-    module = __import__('%s.%s' % (api_path, module_name),globals(),locals(),[module_name, ''],-1)     
-    print 'this is module'
-    print module
-    body = {
-            "url": module.url,
-            "method": module.method,
-            "response": data
-            }
-    print body
-    try:
-        request = Request(url = uri, body = body, method = "post", base_url = url)
-        print request
-        result = request.send().result
-        print 'this is result'
-        print result
-        if result['status'] == '200':
-            Log.Chorus.debug("Set response success!")
-            return True
+class server:
+    def __init__(self, serverAddr, port, ssl = False):
+        if ssl:
+            prefix = "https://"
         else:
-            Log.Chorus.debug("Set response failed!")
-            return False
-    except:
-        Log.Chorus.exception("Error response returned!")
-        return False
-    
-def _get_baseurl():
-    section = "MOCK_SERVER"
-    config = Utils.config
-    Utils.AssertConfig(section, "BASEURL")
-    Utils.AssertConfig(section, "Port")
-    Utils.AssertConfig(section, "SSL")
-    Utils.AssertConfig(section, "APITemplatePath")
-    try:
-        port = int(config[section]["port"])
-    except:
-        raise Exceptions.IncorrectConfigError("Port should be an integer")
-    #assamble url
-    try:
-        if config[section]["ssl"].lower() == "true":
-            ssl = True
-        else:
-            ssl = False
-    except:
-        ssl = False
-    if ssl:
-        prefix="https://"
-    else:
-        prefix="http://"
-    ip = config[section]["baseurl"]
-    port = config[section]["port"]    
-    url = prefix + ":".join((ip,port))    
-    api_path = config[section]["apitemplatepath"]
+            prefix = "http://"
+        self.baseurl = "%s%s:%s" % (prefix, serverAddr, port)
 
-    return url, api_path
-
-def SetDelay(delay = 0, is_global = False):
-    '''
-    by default the delay is 0. set value to get a delayed response. The value must be int type.
-    '''
-    if not isinstance(delay, int):
-        raise Log.Chorus.exception("delay must be integer!")
+    def SetResponse(self, module, response):
+        '''
+        set data returned by mock server
+        Two args: 
+            The first arg is the module instance of the api template
+            The second arg is response we'd like to set
+        if success, return true. else, return false
+        '''
         
-    url, api_path = _get_baseurl()
-    uri = "/set/delay"     
-    body = { 'delay': delay , 'is_global': is_global}
-    try:
-        request = Request(url = uri, body = body, method = "post", base_url = url)
-        result = request.send().result
-        if result['status'] == '200':
-            Log.Chorus.debug("Set delay success!")
-            return True
-        else:
-            Log.Chorus.debug("Set delay failed!")
-            return False
-    except:
-        Log.Chorus.exception("Error response returned!")
-        return False    
-    
+        uri = "/set/response"    
+        #assamble body
+        body = {
+                "url": module.url,
+                "method": module.method,
+                "response": response
+                }
+        print body
+        try:
+            request = Request(url = uri, body = body, method = "post", base_url = self.baseurl)
+            print request
+            result = request.send().result
+            print 'this is result'
+            print result
+            if result['status'] == '200':
+                print("Set response success!")
+                return True                
+            else:
+                raise Exception("Set response failed!")
+
+        except:
+            print("Error response returned!")
+            return False      
+
+    def SetDelay(self, delay = 0, is_global = False):
+        '''
+        by default the delay is 0. set value to get a delayed response. The value must be int type.
+        '''
+        if not isinstance(delay, int):
+            raise Exception("delay must be integer!")
+                    
+        uri = "/set/delay"     
+        body = { 'delay': delay , 'is_global': is_global}
+        try:
+            request = Request(url = uri, body = body, method = "post", base_url = self.baseurl)
+            result = request.send().result
+            if result['status'] == '200':
+                print("Set delay success!")
+                return True                
+            else:
+                raise Exception("Set delay failed!")
+        except:
+            print("Error response returned!")
+            return False    
+        
 
 
-def SetMode(mode = Mode.Mock, is_global = True):
-    '''
-    by default set mode will change mode permenently. If you don't want this, set global to false
-    '''
-    url, api_path = _get_baseurl()
-    uri = "/set/mode"     
-    body = { 'mode': mode, 'is_global': is_global}
-    try:
-        request = Request(url = uri, body = body, method = "post", base_url = url)
-        result = request.send().result
-        if result['status'] == '200':
-            Log.Chorus.debug("Set mode success!")
-            return True
-        else:
-            Log.Chorus.debug("Set mode failed!")
-            return False
-    except:
-        Log.Chorus.exception("Error response returned!")
-        return False
+    def SetMode(self, mode = Mode.Mock, is_global = True):
+        '''
+        by default set mode will change mode permenently. If you don't want this, set global to false
+        '''
+        uri = "/set/mode"     
+        body = { 'mode': mode, 'is_global': is_global}
+        try:
+            request = Request(url = uri, body = body, method = "post", base_url = self.baseurl)
+            result = request.send().result
+            if result['status'] == '200':
+                print("Set mode success!")
+                return True                
+            else:
+                raise Exception("Set mode failed!")
+        except:
+            print("Error response returned!")
+            return False  
 
 if __name__ == "__main__":
     Utils.configfile = "mockserver_Demo.cfg"

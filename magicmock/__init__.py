@@ -15,12 +15,13 @@ from magicmock.Log import Output, Formatter, Logger, Name
 from optparse import OptionParser
 from magicmock.Http.web.wsgiserver import CherryPyWSGIServer
 from magicmock.Http.HttpHandler import *
-
+from ClientAPI import server
 urls = (
         '/set/response', "SetResponse",
         '/set/response_common',"SetResponseCommon",
         '/set/mode', "SetMode",
         '/set/delay', "SetDelay",
+        '/set/meta', "Meta",
         '^.*', 'RequestHandler'
         )    
 application = web.application(urls, globals())
