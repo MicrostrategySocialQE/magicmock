@@ -702,4 +702,27 @@ def rm_r(path):
     try:
         
         if os.path.isdir(path):
-            shutil.rmtree(path, ignore_errors=False, onerror=handleRemoveRead
+            shutil.rmtree(path, ignore_errors=False, onerror=handleRemoveReadonly)
+        elif os.path.exists(path):
+            os.remove(path)
+    except Exception,e:
+        print e
+        print "Cannot remove the directory"
+        
+def handleRemoveReadonly(func, path, exc):
+    excvalue = exc[1]
+    if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
+        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
+        func(path)
+    else:
+        raise
+if __name__ == '__main__':
+    config = {"k1":
+                {"k2":
+                    {"k3": "v"}
+                }
+             }
+    print GetConfig("k1")
+    print GetConfig("k1","k2")
+    print GetConfig("k1","k2","k3")
+    print GetConfig("k2")
