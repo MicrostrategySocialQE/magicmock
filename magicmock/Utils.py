@@ -343,17 +343,18 @@ def InitConfig():
     base_path = os.getcwd()
 
     if configfilePath:
-        path_str = "/".join(["conf",configfilePath,configfile])
+        path_str = "/".join([configfilePath,configfile])
         paths = path_str.split("/")       
         full_path = base_path
         for path in paths:
-            full_path = os.path.join(full_path, base_path)
+            full_path = os.path.join(full_path, path)
         cfg.read(full_path)
     else:
-        cfg.read(os.path.join(base_path, "conf", configfile))
+        full_path = os.path.join(base_path, configfile)
+        cfg.read(full_path)
 
     if not cfg.sections():
-        raise Exceptions.IncorrectConfigError("Cannot read config info from %s at %s, please check you config filename and path!" % (configfile, configfilePath))
+        raise Exceptions.IncorrectConfigError("Cannot read config info from %s, please check your config filename and path!" % (full_path))
     
     config["SuitesInfo"] = {}
     for section in cfg.sections():                        
@@ -701,27 +702,4 @@ def rm_r(path):
     try:
         
         if os.path.isdir(path):
-            shutil.rmtree(path, ignore_errors=False, onerror=handleRemoveReadonly)
-        elif os.path.exists(path):
-            os.remove(path)
-    except Exception,e:
-        print e
-        print "Cannot remove the directory"
-        
-def handleRemoveReadonly(func, path, exc):
-    excvalue = exc[1]
-    if func in (os.rmdir, os.remove) and excvalue.errno == errno.EACCES:
-        os.chmod(path, stat.S_IRWXU| stat.S_IRWXG| stat.S_IRWXO) # 0777
-        func(path)
-    else:
-        raise
-if __name__ == '__main__':
-    config = {"k1":
-                {"k2":
-                    {"k3": "v"}
-                }
-             }
-    print GetConfig("k1")
-    print GetConfig("k1","k2")
-    print GetConfig("k1","k2","k3")
-    print GetConfig("k2")
+            shutil.rmtree(path, ignore_errors=False, onerror=handleRemoveRead
