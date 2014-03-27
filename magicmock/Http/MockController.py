@@ -172,6 +172,12 @@ def SetMode(dct):
         web.mockserver.global_mode = dct['mode']
     else:
         web.mockserver.mode = dct['mode']
+    Log.Mockserver.debug("Set Mode to: %s" %dct['mode'])
+    if dct['mode'] == "Mock" and len(web.mockserver.url_mapping) == 0:
+        section = "MOCK_SERVER"
+        apiTemplatePath = Utils.config[section]["apitemplatepath"]
+        InitURLMapping(apiTemplatePath)
+        
 def RestoreResponse():
     for uri in web.mockserver.mapping_changes.keys():
         if uri in web.ctx.fullpath: 
